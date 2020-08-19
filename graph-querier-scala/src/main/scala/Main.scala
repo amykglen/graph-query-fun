@@ -1,20 +1,26 @@
 object GraphQuerier extends App {
 
   // Load node and edge data from TSVs into 2d arrays
-  val nodeRows = extractDataFromTSV("nodes.tsv", 3)
-  val edgeRows = extractDataFromTSV("edges.tsv", 4)
+  val nodeRows: Array[Array[String]] = extractDataFromTSV("nodes.tsv", 3)
+  val edgeRows: Array[Array[String]] = extractDataFromTSV("edges.tsv", 4)
 
-  // Build node lookup map
-  val nodeMap = nodeRows.map(row => row.head -> row).toMap
+  // Build some node maps for easier lookups
+  val nodeMap: Map[String, Array[String]] = nodeRows.map(row => row.head -> row).toMap
+  val nodesByType: Map[String, Array[Array[String]]] = nodeRows.groupBy(_(2))
+  val nodeIDsByType: Map[String, Set[String]] = nodesByType.map(t => t._1 -> t._2.map(_(0)).toSet)
 
   // Search for nodes connected to specified node (input via sbt shell)
-  val inputNodeID = if (args.length >= 1) args(0) else "CUI:111"
-  val edgeType = if (args.length > 1) args(1) else ""
-  val answerNodeIDs = findConnectedNodes(inputNodeID, edgeRows, edgeType)
+  val inputNodeID: String = if (args.length >= 1) args(0) else "CUI:111"
+  val outputNodeType: String = if (args.length > 1) args(1) else ""
+  val edgeType: String = if (args.length > 2) args(2) else ""
+  val answerNodeIDs: Set[String] = findConnectedNodes(inputNodeID, outputNodeType, edgeType, edgeRows, nodeIDsByType)
+
+  // Report our findings
   if (answerNodeIDs.isEmpty) {
-    println("No connected nodes found.")
+    println("No answers found.")
   } else {
-    println("Connected node IDs are:")
+    val numAnswers: Int = answerNodeIDs.size
+    println(s"Found $numAnswers answers:")
     answerNodeIDs.foreach(nodeID => println(nodeID))
   }
 
@@ -32,15 +38,13 @@ object GraphQuerier extends App {
     return rows
   }
 
-  def findConnectedNodes(inputNodeID: String, edgeRows: Array[Array[String]], edgeType: String = ""): Set[String] = {
+  def findConnectedNodes(inputNodeID: String, outputNodeType: String, edgeType: String = "", edgeRows: Array[Array[String]], nodeIDsByType: Map[String, Set[String]]): Set[String] = {
     // TODO: make search more efficient by using more complex data structures
     val edgesUsingNode = edgeRows.filter(row => row(1) == inputNodeID || row(2) == inputNodeID)
-    if (edgeType == "") {
-      return getNodeIDsUsedByEdges(edgesUsingNode).diff(Set(inputNodeID))
-    } else {
-      val relevantEdges = edgesUsingNode.filter(row => row(3) == edgeType)
-      return getNodeIDsUsedByEdges(relevantEdges).diff(Set(inputNodeID))
-    }
+    val relevantEdges = if (edgeType == "") edgesUsingNode else edgesUsingNode.filter(row => row(3) == edgeType)
+    val connectedNodeIDs = getNodeIDsUsedByEdges(relevantEdges).diff(Set(inputNodeID))
+    val relevantNodeIDs = if (outputNodeType == "") connectedNodeIDs else connectedNodeIDs.intersect(nodeIDsByType.getOrElse(outputNodeType, Set()))
+    return relevantNodeIDs
   }
 
   def getNodeIDsUsedByEdges(edgeRows: Array[Array[String]]): Set[String] = {
