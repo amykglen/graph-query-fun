@@ -18,7 +18,7 @@ object GraphQuerier extends App {
 
 
   def runQuery(inputNodeID: String, outputNodeType: String = "", numHops: Int, edgeRows: Array[Array[String]], nodeIDsByType: Map[String, Set[String]]): Set[String] = {
-    val allConnectedNodeIDs: Set[String] = findConnectedNodes(inputNodeID, numHops, edgeRows).diff(Set(inputNodeID))
+    val allConnectedNodeIDs: Set[String] = findConnectedNodes(inputNodeID, numHops, edgeRows)
     val nodeIDsOfProperType: Set[String] = if (outputNodeType == "") allConnectedNodeIDs else allConnectedNodeIDs.intersect(nodeIDsByType.getOrElse(outputNodeType, Set()))
     nodeIDsOfProperType
   }
@@ -31,7 +31,9 @@ object GraphQuerier extends App {
       if (numHops == 1) {
         directNeighbors
       } else {
-        directNeighbors.flatMap(nodeID => findConnectedNodes(nodeID, numHops - 1, edgeRows))
+        // Remove edges we've already seen to prevent backtracking (this is not efficient, but works for now)
+        val remainingEdgeRows: Array[Array[String]] = edgeRows.filterNot(row => row(1) == inputNodeID || row(2) == inputNodeID)
+        directNeighbors.flatMap(nodeID => findConnectedNodes(nodeID, numHops - 1, remainingEdgeRows))
       }
     }
   }
