@@ -1,3 +1,9 @@
+import scala.concurrent.{Future, Await}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import scala.util.{Failure, Success}
+
+
 object GraphQuerier extends App {
 
   // Load node and edge data from TSVs into 2d arrays
@@ -9,12 +15,25 @@ object GraphQuerier extends App {
   val nodesByType: Map[String, Array[Array[String]]] = nodeRows.groupBy(_(2))
   val nodeIDsByType: Map[String, Set[String]] = nodesByType.map(t => t._1 -> t._2.map(_(0)).toSet)
 
-  // Search for nodes connected to specified node (input via sbt shell)
-  val inputNodeID: String = if (args.length >= 1) args(0) else "CUI:111"
-  val numHops: Int = if (args.length > 1) args(1).toInt else 1
-  val outputNodeType: String = if (args.length > 2) args(2) else ""
-  val answerNodeIDs: Set[String] = runQuery(inputNodeID, outputNodeType, numHops, edgeRows, nodeIDsByType)
-  reportFindings(answerNodeIDs)
+  if (args.length > 0) {
+    // Run query based on input given in sbt shell
+    val inputNodeID: String = args(0)
+    val numHops: Int = if (args.length > 1) args(1).toInt else 1
+    val outputNodeType: String = if (args.length > 2) args(2) else ""
+    val answerNodeIDs: Set[String] = runQuery(inputNodeID, outputNodeType, numHops, edgeRows, nodeIDsByType)
+    reportFindings(answerNodeIDs, inputNodeID)
+  } else {
+    // Run some example queries in parallel
+    val curieList: Array[String] = Array("PR:30", "HP:9", "CUI:111")
+    println(s"Kicking off queries for nodes in this order: ${curieList.mkString(", ")}")
+    curieList.foreach(nodeID => Future {
+      runQuery(nodeID, "", 1, edgeRows, nodeIDsByType)
+    }.onComplete({
+      case Success(value) => reportFindings(value, nodeID)
+      case Failure(error) => error.printStackTrace
+    }))
+    println("This will be printed before query results are, even though it comes after them in the code..")
+  }
 
 
   def runQuery(inputNodeID: String, outputNodeType: String = "", numHops: Int, edgeRows: Array[Array[String]], nodeIDsByType: Map[String, Set[String]]): Set[String] = {
@@ -44,13 +63,12 @@ object GraphQuerier extends App {
     connectedNodeIDs
   }
 
-  def reportFindings(answerNodeIDs: Set[String]): Unit = {
+  def reportFindings(answerNodeIDs: Set[String], inputNodeID: String): Unit = {
     if (answerNodeIDs.isEmpty) {
-      println("No answers found.")
+      println(s"No answers found for node $inputNodeID.")
     } else {
       val numAnswers: Int = answerNodeIDs.size
-      println(s"Found $numAnswers answers:")
-      answerNodeIDs.foreach(nodeID => println(nodeID))
+      println(s"Found $numAnswers answers for node $inputNodeID: ${answerNodeIDs.mkString(", ")}")
     }
   }
 
