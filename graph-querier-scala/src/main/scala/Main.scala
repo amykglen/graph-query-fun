@@ -1,6 +1,5 @@
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{Future}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
 
@@ -43,6 +42,7 @@ object GraphQuerier extends App {
   }
 
   def findConnectedNodes(inputNodeID: String, numHops: Int, edgeRows: Array[Array[String]]): Set[String] = {
+    // TODO: use more complex data structure to store node connection data (inefficient currently)
     if (numHops <= 0) {
       Set()
     } else {
