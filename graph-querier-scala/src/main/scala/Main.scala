@@ -7,13 +7,13 @@ import scala.util.{Failure, Success}
 object GraphQuerier extends App {
 
   // Load node and edge data from TSVs into 2d arrays
-  val nodeRows: Array[Array[String]] = extractDataFromTSV("nodes.tsv", 3)
-  val edgeRows: Array[Array[String]] = extractDataFromTSV("edges.tsv", 4)
+  val nodeRows: Array[Array[String]] = extractDataFromTSV("../nodes.tsv", 3)
+  val edgeRows: Array[Array[String]] = extractDataFromTSV("../edges.tsv", 4)
 
   // Build some node maps for easier lookups
   val nodeMap: Map[String, Array[String]] = nodeRows.map(row => row.head -> row).toMap
   val nodesByType: Map[String, Array[Array[String]]] = nodeRows.groupBy(_(2))
-  val nodeIDsByType: Map[String, Set[String]] = nodesByType.map(t => t._1 -> t._2.map(_(0)).toSet)
+  val nodeIDsByType: Map[String, Set[String]] = nodesByType.map({case (key, value) => (key -> value.map(_(0)).toSet)})
 
   if (args.length > 0) {
     // Run query based on input given in sbt shell
@@ -24,7 +24,7 @@ object GraphQuerier extends App {
     reportFindings(answerNodeIDs, inputNodeID)
   } else {
     // Run some example queries in parallel
-    val curieList: Array[String] = Array("PR:30", "HP:9", "CUI:111")
+    val curieList: Array[String] = Array("MONDO:0005015", "UniProtKB:O00170", "UniProtKB:Q14191")
     println(s"Kicking off queries for nodes in this order: ${curieList.mkString(", ")}")
     curieList.foreach(nodeID => Future {
       runQuery(nodeID, "", 1, edgeRows, nodeIDsByType)

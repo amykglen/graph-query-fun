@@ -1,0 +1,5 @@
+100	MONDO:0005015	UniProtKB:O00170	interacts_with
+200	UniProtKB:Q14191	MONDO:0005015	has_phenotype
+300	UniProtKB:P01308	MONDO:0005015	disrupts
+400	UniProtKB:O00170	UniProtKB:P01308	interacts_with
+500	CHEBI:49826	UniProtKB:O00170	interacts_with
